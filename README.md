@@ -7,6 +7,26 @@
 #### @Query
 
 #### 페이징
+- 리턴 타입을 `Page`, `Slice` 타입을 지정하면 페이징에 필요한 기능을 제공한다.
+- ```java
+  // Repository
+  // totalCount를 구하는 쿼리를 추가로 실행한다.
+  Page<Member> findByAge(int age, Pageable pageable);
+
+  // totalCount를 구하는 쿼리를 직접 지정할 수 있다.
+  @Query(value = "select m from Member m left join m.team where m.age = :age", countQuery = "select count(m) from Member m")
+  Page<Member> findWithCountByAge(@Param(value = "age") int age, Pageable pageable);
+
+  // totalCount를 구하는 로직을 실행하지 않는다.
+  // 다음 페이지 여부를 확인하기 위해 Pageable에서 지정한 size + 1을 size로 수행한다.
+  Slice<Member> findSliceByAge(int age, Pageable pageable);    
+  
+  // Test
+  int age = 10;
+  PageRequest pageRequest = PageRequest.of(0, 3, Sort.by(Sort.Direction.DESC, "username")); // Pageable (page, limit, sort)를 지정한다.
+  
+  Page<Member> page = memberRepository.findWithCountByAge(age, pageRequest);
+  ```
 
 #### 벌크 업데이트
 - DB에 바로 update를 질의한다. update된 엔티티는 영속화되지 않는 상태이므로
@@ -48,6 +68,7 @@
   @QueryHints(value = @QueryHint(name = "org.hibernate.readOnly", value = "true")) // readOnly 힌트 제공
   Member findReadOnlyByUsername(String username);
   
+  // Test
   Member member = new Member("member1", 10);
   memberRepository.save(member);
   em.flush();
