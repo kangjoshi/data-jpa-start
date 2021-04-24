@@ -186,6 +186,49 @@ public interface MemberRepository extends JpaRepository<Member, Long>, MemberRep
   }
   ```
 
+##### 새로운 엔티티를 구별하는 방법
+- 스프링 JPA의 구현체인 `SimpleJpaRepository`의 save 메서드는 엔티티가 새로운 엔티티면 `persist` 아니면 `merge`를 한다.
+- 새오운 엔티티는 primitive 타입이라면 0, 참조형이라면 null일때 새로운 엔티티로 판단한다.
+- ```
+  @Transactional
+  	@Override
+  	public <S extends T> S save(S entity) {
+  
+  		Assert.notNull(entity, "Entity must not be null.");
+  
+  		if (entityInformation.isNew(entity)) {
+  			em.persist(entity);
+  			return entity;
+  		} else {
+  			return em.merge(entity);
+  		}
+  }
+  ```
+- PK가 @GeneratedValue 되는 상황이면 상관없지만, PK를 직접 셋팅하는 경우는 PK의 값이 있는 채로 `save`가 호출되므로 스프링 JPA는 기존 엔티티로 판단하여 `merge`를 수행한다. (merge는 select -> insert 하므로 비효율적)
+- ```
+  @Entity
+  @NoArgsConstructor(access = AccessLevel.PROTECTED)
+  public class Item extends BaseEntity implements Persistable<String> { // Persistable 인터페이스를 구현하여 isNew에 대한 전략 정의
+
+      @Id
+      private String id;
+    
+      public Item(String id) {
+          this.id = id;
+      }
+    
+      @Override
+      public String getId() {
+          return id;
+      }
+    
+      @Override
+      public boolean isNew() {
+          return getCreatedDate() == null;
+      }
+    
+  }
+  ```  
 
   
 ##### Reference

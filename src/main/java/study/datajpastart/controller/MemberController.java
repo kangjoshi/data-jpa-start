@@ -8,7 +8,9 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 import study.datajpastart.dto.MemberDto;
+import study.datajpastart.entity.Item;
 import study.datajpastart.entity.Member;
+import study.datajpastart.repository.ItemRepository;
 import study.datajpastart.repository.MemberRepository;
 
 import javax.annotation.PostConstruct;
@@ -18,6 +20,7 @@ import javax.annotation.PostConstruct;
 public class MemberController {
 
     private final MemberRepository memberRepository;
+    private final ItemRepository itemRepository;
 
     @GetMapping("/members/{id}")
     public String findMember(@PathVariable("id") Long id) {
@@ -39,9 +42,13 @@ public class MemberController {
 
     @PostConstruct
     public void init() {
+        itemRepository.save(new Item("A"));
+        /*
         for (int i = 0; i < 100; i++) {
             memberRepository.save(new Member("member" + i, 10));
         }
+
+         */
     }
 
 
