@@ -83,3 +83,110 @@
     
   em.flush();
   ```
+
+#### 사용자 정의 레포짓토리 구현
+- QueryDSL, JDBC등 함께 사용할 때 사용자 정의 레포짓토리를 구현하여 사용한다.
+- 사용자 정의 레포짓토리 구현체는 클래스 이름이 인터페이스 이름 + Impl이 되어야 한다.
+    - impl 대신 다른 이름으로 변경하고 싶다면 config를 설정하여 변경할 수 있다. (관례를 따르는게 좋으니 변경하지 않는게 좋다)
+- 사용자 정의 레포짓토리는 기존 레포짓토리(`MemberRepository`)의 기능을 확장하는 개념
+```
+// 커스텀 Repository 생성
+public interface MemberRepositoryCustom {
+    List<Member> findMemberCustom();
+}
+
+// 커스텀 Repository 구현체 생성
+@RequiredArgsConstructor
+public class MemberRepositoryImpl implements MemberRepositoryCustom {
+
+    private final EntityManager em;
+
+    @Override
+    public List<Member> findMemberCustom() {
+        return em.createQuery("select m from Member m")
+                .getResultList();
+    }
+}
+
+// 커스텀으로 만든 MemberRepositoryCustom 인터페이스를 extends
+public interface MemberRepository extends JpaRepository<Member, Long>, MemberRepositoryCustom {
+}
+```
+
+#### Auditing
+- 등록일, 수정일, 등록자, 수정자에 대한 관리
+- 공통적인 기능을 담당하는 Super 클래스를 만들어 상속 받는다.
+1. JPA 이용
+    - ```java
+      @MappedSuperclass
+      @Getter
+      public class JpaBaseEntity {
+
+        @Column(updatable = false)  // updatable = false로 하게되면 update되지 않는다.
+        private LocalDateTime createdDate;
+        private LocalDateTime updatedDate;
+
+        @PrePersist                 // persist전 호출
+        public void prePersist() {
+          LocalDateTime now = LocalDateTime.now();
+          createdDate = now;
+          updatedDate = now;
+        }
+
+        @PreUpdate
+        public void preUpdate() {  // update전 호출
+          updatedDate = LocalDateTime.now();
+        }
+      }
+     
+    @Entity   
+    public class Member extends JpaBaseEntity {  // JpaBaseEntity를 상속받는다.
+    
+    }
+    ```
+2. 스프링 JPA 이용    
+    - ```java
+      @EntityListeners(AuditingEntityListener.class)  // audit 이벤트를 수신하는 리스너
+      @MappedSuperclass
+      @Getter
+      public class BaseEntity {
+          @CreatedDate
+          @Column(updatable = false)
+          private LocalDateTime createdDate;
+      
+          @LastModifiedDate
+          private LocalDateTime lastModifiedDate;
+      
+          @CreatedBy
+          @Column(updatable = false)
+          private String createBy;
+      
+          @LastModifiedBy
+          private String lastModifiedBy;
+      }
+      
+      @EnableJpaAuditing  // auditing 활성화
+      @Configuration
+      public class JpaConfig {
+          @Bean
+          public AuditorAware<String> auditorProvider() {
+              return () -> Optional.of(UUID.randomUUID().toString()); // createBy, lastModifiedBy에 들어가는 값을 설정
+          }
+      }
+      ```
+
+#### Web 확장 - 페이징과 정렬
+- 페이징과 정렬을 쉽게하기 위한 기능 제공
+- page 시작은 0부터 시작한다. (1부터 시작하려면 직접 pageable를 정의 해야한다.)
+- ```java
+  @GetMapping("/members")
+  public Page<Member> list(@PageableDefault(size = 5) Pageable pageable) {   // request parameter page, sort, size를 바인딩한다.
+      Page<Member> page = memberRepository.findAll(pageable);
+      return page.map(MemberDto::new);
+  }
+  ```
+
+
+  
+##### Reference
+실전! 스프링 데이터 JPA.김영한.인프런강의

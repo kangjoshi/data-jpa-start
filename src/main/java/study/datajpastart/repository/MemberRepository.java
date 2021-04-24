@@ -17,7 +17,7 @@ import java.util.Optional;
 /*
 * @Repository를 따로 선언하지 않아도 된다.
 * */
-public interface MemberRepository extends JpaRepository<Member, Long> {
+public interface MemberRepository extends JpaRepository<Member, Long>, MemberRepositoryCustom {
 
     /**
      * 메서드명 쿼리
