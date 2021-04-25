@@ -230,6 +230,43 @@ public interface MemberRepository extends JpaRepository<Member, Long>, MemberRep
   }
   ```  
 
-  
+##### Projections
+- select에서 가져올 컬럼을 지정한다.
+- 단순한 구조로만 뽑을때는 좋지만, 복잡(중첩구조등) 해지면 최적화가 않되므로 QueryDSL을 사용하는것이 좋다. (그냥 QueryDSL로 통일하여 사용하는게 좋을듯)
+1. 인터페이스 방식
+    - ```java
+      public interface UsernameOnly {    // Projection 인터페이스 생성
+        
+          @Value("#{target.username + ':' + target.age}") // 반환할 문자 포멧 지정
+          String getUsername();
+      }
+    
+      // Repository
+      List<UsernameOnly> findProjectionsByUsername(String username);
+      ```
+2. 클래스 방식 
+    - ```
+      public class UsernameOnlyDto {
+          private final String username;
+      
+          public UsernameOnlyDto(String username) { // 컬럼명과 일치 해야한다.
+              this.username = username;
+          }
+      
+          public String getUsername() {
+              return username;
+          }
+      }
+      
+      // Repository
+      List<UsernameOnlyDto> findProjectionsByUsername(String username);
+      ```
+
+##### NativeQuery
+- DB에 직접 SQL 질의
+- 반환타입(Projections으로 어느정도 해결이 가능해짐.), Sort 파라미터를 통한 정렬, 동적 쿼리등 제약이 많다. 
+- 위와 같은 제약으로 직접 질의가 필요하다면 NativeQuery보다는 Sprign JdbcTemplete 또는 myBatis를 사용하는것이 좋다.
+
+
 ##### Reference
 실전! 스프링 데이터 JPA.김영한.인프런강의
