@@ -1,10 +1,44 @@
-### Spring JPA
+## Spring JPA
 
 #### 메소드명 쿼리
-
+- Spring JPA가 메서드명을 참고하여 JPQL 쿼리를 생성한다.
+- ```java
+  List<Member> findByUsernameAndAgeGreaterThan(String username, int age); // select m from Member m where m.username = :username and m.age >= :age
+  ```
 #### NamedQuery
-
+- Entity에 namedQuery 정의 후 Repository에서 사용할 수 있다.
+- 컴파일 시점에 쿼리에 이상이 없는지 검사한다.
+- ```java
+  // Entity
+  @NamedQuery(    // Entity에 NamedQuery 정의
+          name = "Member.findByUsername",
+          query = "select m from Member m where m.username = :username"
+  )
+  public class Member {
+    
+  }
+  
+  // Repository
+  @Query(name = "Member.findByUsername")
+  List<Member> findByUsername(@Param(value = "username") String username);
+  ```
+  
 #### @Query
+- 직접 쿼리 작성 (이름이 없는 namedQuery)
+- namedQuery와 동일하게 컴파일 시점에 쿼리에 이상이 없는지 검사한다.
+- Entity에 정의하는 namedQuery는 Entity에 정의해야한다는 단점이 있고, 메서드명 쿼리는 파라미터가 두개 이상이 되면 메서드명이 장황해지는 단점이 있다. 이 경우는 직접 쿼리를 작성하여 사용하는것이 좋다.
+- ```java
+  @Query("select m from Member m where m.username = :username and m.age = :age")
+  List<Member> findUser(@Param(value = "username") String username, @Param("age") int age);
+  
+  // where에 in절 사용
+  @Query("select m from Member m where m.username in :names") 
+  List<Member> findByMembers(@Param("names") Collection<String> names);
+  
+  // Dto로 projection
+  @Query("select new study.datajpastart.dto.MemberDto(m.id, m.username, t.name) from Member m join m.team t")
+  List<MemberDto> findMemberDto();
+  ```
 
 #### 페이징
 - 리턴 타입을 `Page`, `Slice` 타입을 지정하면 페이징에 필요한 기능을 제공한다.
@@ -89,29 +123,29 @@
 - 사용자 정의 레포짓토리 구현체는 클래스 이름이 인터페이스 이름 + Impl이 되어야 한다.
     - impl 대신 다른 이름으로 변경하고 싶다면 config를 설정하여 변경할 수 있다. (관례를 따르는게 좋으니 변경하지 않는게 좋다)
 - 사용자 정의 레포짓토리는 기존 레포짓토리(`MemberRepository`)의 기능을 확장하는 개념
-```
-// 커스텀 Repository 생성
-public interface MemberRepositoryCustom {
-    List<Member> findMemberCustom();
-}
-
-// 커스텀 Repository 구현체 생성
-@RequiredArgsConstructor
-public class MemberRepositoryImpl implements MemberRepositoryCustom {
-
-    private final EntityManager em;
-
-    @Override
-    public List<Member> findMemberCustom() {
-        return em.createQuery("select m from Member m")
-                .getResultList();
+- ```java
+    // 커스텀 Repository 생성
+    public interface MemberRepositoryCustom {
+      List<Member> findMemberCustom();
     }
-}
 
-// 커스텀으로 만든 MemberRepositoryCustom 인터페이스를 extends
-public interface MemberRepository extends JpaRepository<Member, Long>, MemberRepositoryCustom {
-}
-```
+    // 커스텀 Repository 구현체 생성
+    @RequiredArgsConstructor
+    public class MemberRepositoryImpl implements MemberRepositoryCustom {
+
+      private final EntityManager em;
+
+      @Override
+      public List<Member> findMemberCustom() {
+          return em.createQuery("select m from Member m")
+                    .getResultList();
+      }
+    }
+ 
+    // 커스텀으로 만든 MemberRepositoryCustom 인터페이스를 extends
+    public interface MemberRepository extends JpaRepository<Member, Long>, MemberRepositoryCustom {
+    }
+    ```
 
 #### Auditing
 - 등록일, 수정일, 등록자, 수정자에 대한 관리
